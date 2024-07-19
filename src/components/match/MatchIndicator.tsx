@@ -216,13 +216,14 @@ const MatchIndicator: React.FC<MatchIndicatorProps> = ({ data }) => {
             {genreMatchPercentage}%
           </div>
         </div>
-        <div className="w-full bg-gray-300 rounded-b-lg pt-0 pb-1 pl-2 pr-1 ">
+        <div className="w-full bg-gray-300 rounded-b-lg p-2 space-y-1">
           {data.genres.map((genre) => (
-            <small key={genre.id} className="text-gray-700">
-              {genre.description}&nbsp;
-            </small>
+            <div key={genre.id} className="inline-block bg-white text-gray-700 rounded-md px-2 py-0">
+              <small>{genre.description}</small>
+            </div>
           ))}
         </div>
+
       </div>
 
       <div className="mb-4">
@@ -254,7 +255,8 @@ const MatchIndicator: React.FC<MatchIndicatorProps> = ({ data }) => {
                         style={{
                           width: `${barWidth}%`,
                           left: `${barLeft}%`,
-                          backgroundColor: 'rgba(0, 165, 0, 0.5)',
+                          backgroundImage: 'linear-gradient(135deg, rgba(200, 150, 150, 0.8) 25%, transparent 25%, transparent 50%, rgba(200, 150, 150, 0.8) 50%, rgba(200, 150, 150, 0.8) 75%, transparent 75%, transparent)',
+                          backgroundSize: '10px 10px',
                         }}
                       ></div>
                     );
