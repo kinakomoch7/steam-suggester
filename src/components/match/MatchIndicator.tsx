@@ -182,12 +182,13 @@ const MatchIndicator: React.FC<MatchIndicatorProps> = ({ data }) => {
   };
 
   const calculateUserSelectedPrice = () => {
-    let price = 0;
-    Object.keys(userSelected.Price).forEach((key, index) => {
-      if (userSelected.Price[Number(key)]) {
-        price = index === 0 ? 0 : (index + 1) * 1000;
-      }
-    });
+    let price = 5000;
+    // let price = 0;
+    // Object.keys(userSelected.Price).forEach((key, index) => {
+    //   if (userSelected.Price[Number(key)]) {
+    //     price = index === 0 ? 0 : (index + 1) * 1000;
+    //   }
+    // });
     return price;
   };
 
@@ -255,7 +256,7 @@ const MatchIndicator: React.FC<MatchIndicatorProps> = ({ data }) => {
                         style={{
                           width: `${barWidth}%`,
                           left: `${barLeft}%`,
-                          backgroundImage: 'linear-gradient(135deg, rgba(200, 150, 150, 0.8) 25%, transparent 25%, transparent 50%, rgba(200, 150, 150, 0.8) 50%, rgba(200, 150, 150, 0.8) 75%, transparent 75%, transparent)',
+                          backgroundImage: 'linear-gradient(135deg, rgba(200, 120, 120, 0.8) 25%, transparent 25%, transparent 50%, rgba(200, 120, 120, 0.8) 50%, rgba(200, 120, 120, 0.8) 75%, transparent 75%, transparent)',
                           backgroundSize: '10px 10px',
                         }}
                       ></div>
@@ -263,14 +264,13 @@ const MatchIndicator: React.FC<MatchIndicatorProps> = ({ data }) => {
                   }
                   return null;
                 })}
-                {/* <div className="absolute top-0 left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-black"></div> */}
                 <div className="absolute top-0 left-0 transform -translate-x-1/2 h-full w-0.5 bg-black"></div>
                 <div className="absolute top-0 right-0 transform translate-x-1/2 h-full w-0.5 bg-black"></div>
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-black">
+                {/* <div className="absolute top-0 left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-black">
                   <span className="absolute top-full -translate-x-1/2 mt-1 text-xs"  style={{ whiteSpace: 'nowrap' }}>
                     {calculateUserSelectedPrice() != 0 ? calculateUserSelectedPrice().toLocaleString() + "円" : "1000円"}
                   </span>
-                </div>
+                </div> */}
               </div>
             ) : (
               <div
