@@ -217,7 +217,7 @@ const MatchIndicator: React.FC<MatchIndicatorProps> = ({ data }) => {
             {genreMatchPercentage}%
           </div>
         </div>
-        <div className="w-full bg-gray-300 rounded-b-lg p-2 space-y-1">
+        <div className="w-full bg-gray-300 rounded-b-lg p-2 space-y-1 py-1">
           {data.genres.map((genre) => (
             <div key={genre.id} className="inline-block bg-white text-gray-700 rounded-md px-2 py-0">
               <small>{genre.description}</small>
