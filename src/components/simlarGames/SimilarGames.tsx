@@ -1,36 +1,78 @@
+'use client';
+import React, { useState, useEffect } from "react";
 import createNetwork from "@/hooks/createNetwork";
-import Headline from "../common/Headline";
 import DisplayGame from "./DisplayGame";
-import { GameDetails } from "@/types/similarGames/GameDetails";
+import { DetailsPropsType, SimilarGamePropsType } from "@/types/DetailsType";
+import { DEFAULT_FILTER, DEFAULT_SLIDER } from "@/constants/DEFAULT_FILTER";
+import { getFilterData, getGameIdData, getSliderData } from "@/hooks/indexedDB";
+import { CircularProgress } from '@mui/material';
+import fetchWithCache from "@/hooks/fetchWithCache";
+import { SteamDetailsDataType } from "@/types/api/getSteamDetailType";
 
-const SimilarGames = async (props: any) => {
-  const { steamGameId } = props;
+type GameType = {
+  steamGameId: string;
+  twitchGameId: string;
+}
 
-  const { similarGames } = await createNetwork();
+const SimilarGames = (props: DetailsPropsType) => {
 
-  const data: any = [];
+  const { steamGameId, twitchGameId } = props;
 
-  if(similarGames[steamGameId]) {
-    for(let i = 0; i < similarGames[steamGameId].length; i++) {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_CURRENT_URL}/api/details/getSimilarGames/${similarGames[steamGameId][i].steamGameId}`)
-      const d = await res.json();
-      data.push({
-        ...d, 
-        steamGameId: similarGames[steamGameId][i].steamGameId,
-        twitchGameId: similarGames[steamGameId][i].twitchGameId
-      });
-    }
+  const [data, setData] = useState<SteamDetailsDataType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const filter = await getFilterData() ?? DEFAULT_FILTER;
+        const gameIds = await getGameIdData() ?? [];
+        const slider = await getSliderData() ?? DEFAULT_SLIDER;
+        const { similarGames } = await createNetwork(filter, gameIds, slider);
+    
+        if (similarGames && similarGames[steamGameId]) {
+          const promises = similarGames[steamGameId].map(async (game: GameType) => {
+            const d = await fetchWithCache(`${process.env.NEXT_PUBLIC_CURRENT_URL}/api/details/getSteamGameDetail/${game.steamGameId}`);
+            return {
+              ...d, 
+              steamGameId: game.steamGameId,
+              twitchGameId: game.twitchGameId
+            };
+          });
+    
+          const fetchedData = await Promise.all(promises);
+          setData(fetchedData);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [steamGameId]);
+
+  if (!data || loading) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <CircularProgress />
+      </div>
+    );
+  }
+
+  if (data.length === 0) {
+    return <div className="text-white text-center">類似するゲームが見つかりませんでした。</div>;
   }
 
   return (
-    <div>
-      <Headline txt="類似してるゲーム" />
-      {data.map((game: GameDetails) => (
-        <DisplayGame key={game.url} name={game.name} image={game.image} url={game.url} steamGameId={game.steamGameId} twitchGameId={game.twitchGameId} />
+    <div className="grid grid-cols-2 gap-4">
+      {data.map((node: SteamDetailsDataType) => (
+        <DisplayGame 
+          key={node.steamGameId} 
+          node={node}
+        />
       ))}
     </div>
-  )
+  );
 }
 
-export default SimilarGames
-
+export default SimilarGames;

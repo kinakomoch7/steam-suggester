@@ -1,4 +1,5 @@
 import TwitchToken from "@/app/api/TwitchToken";
+import { TwitchClipApiType, TwitchClipDataType, TwitchClipType } from "@/types/api/getTwitchClipType";
 import { NextResponse } from "next/server";
 
 type Params = {
@@ -8,13 +9,14 @@ type Params = {
 };
 
 export async function GET(req: Request, { params }: Params) {
+  const ClipCount = 3;
 
   const gameId = params.twitchGameId;
 
-  // 一週間前の日付を取得
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  const startedAtRFC3339 = oneWeekAgo.toISOString();// RFC3339形式に変換
+  // 一ヶ月前の日付を取得
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  const startedAtRFC3339 = oneMonthAgo.toISOString();// RFC3339形式に変換
 
 
   try {
@@ -37,11 +39,12 @@ export async function GET(req: Request, { params }: Params) {
         headers: headers,
       }
     )
-    const data = await res.json()
+    const data:TwitchClipApiType  = await res.json()
 
     // 同じ配信者のクリップを除外、日本語のクリップを取得、３件に制限
+    // 日本語のクリップで3件に満たない場合、英語のクリップを追加
     const seenCreatorIds = new Set();
-    const uniqueClips = data.data.filter((clip: any) => {
+    const uniqueClips = data.data.filter((clip: TwitchClipDataType) => {
       if (seenCreatorIds.has(clip.broadcaster_id)) {
         return false;
       } else {
@@ -49,9 +52,13 @@ export async function GET(req: Request, { params }: Params) {
         return true;
       }
     })
-    const japaneseUniqueClips = uniqueClips.filter((clip: any) => clip.language === 'ja');
-    const japaneseUniqueClipsLimited = japaneseUniqueClips.slice(0, 3);
-    const resultClips = japaneseUniqueClipsLimited.map((clip: any) => {
+    const japaneseUniqueClips = uniqueClips.filter((clip: TwitchClipDataType) => clip.language === 'ja');
+    const japaneseUniqueClipsLimited = japaneseUniqueClips.slice(0, ClipCount);
+    if(japaneseUniqueClipsLimited.length !== ClipCount) {
+      const englishUniqueClips = uniqueClips.filter((clip: TwitchClipDataType) => clip.language !== 'ja').slice(0, ClipCount-japaneseUniqueClips.length);
+      japaneseUniqueClipsLimited.push(...englishUniqueClips);
+    }
+    const resultClips:TwitchClipType[] = japaneseUniqueClipsLimited.map((clip: TwitchClipDataType) => {
       return ({
         id: clip.id,
         url: clip.url,

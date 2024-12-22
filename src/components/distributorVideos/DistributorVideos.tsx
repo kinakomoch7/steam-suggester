@@ -1,29 +1,44 @@
-import Headline from "../common/Headline"
-import DisplayClip from "./DisplayClip"
+'use client'
 
-const DistributorVideos = async({twitchGameId}:{twitchGameId:string}) => {
+import ClipSlideshow from "./ClipSlideshow";
+import { DetailsPropsType } from "@/types/DetailsType";
+import CircularProgress from "@mui/material/CircularProgress";
+import useSWR from "swr";
+import { fetcher } from "../common/Fetcher";
 
+const DistributorVideos = ({ twitchGameId }: DetailsPropsType) => {
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_CURRENT_URL}/api/details/getTwitchClips/${twitchGameId}`)
-  const data = await res.json()
+  const { data, error } = useSWR(`${process.env.NEXT_PUBLIC_CURRENT_URL}/api/details/getTwitchClips/${twitchGameId}`, fetcher);
 
+  if (!data) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <CircularProgress />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 text-center">
+        データの取得中にエラーが発生しました。
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <Headline txt='関連配信者リスト' />
-      <div className="flex flex-row space-x-5">
-        {data.map((clip: any) => (
-          <DisplayClip
-            key={clip.id}
-            id={clip.id}
-            url={clip.url}
-            embedUrl={clip.embedUrl}
-            image={clip.image}
-            title={clip.title}/>
-        ))}
-      </div>
+    <div className="bg-gray-700 rounded-lg shadow-lg">
+      {data.length === 0 ? (
+        <div className="text-white text-center">
+          直近の配信者のクリップがありません
+        </div>
+      ) : (
+        <div className="relative">
+          <ClipSlideshow data={data} />
+        </div>
+      )}
     </div>
-  )
-}
+  );
+};
 
-export default DistributorVideos
+export default DistributorVideos;
