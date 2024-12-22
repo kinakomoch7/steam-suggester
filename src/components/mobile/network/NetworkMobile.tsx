@@ -6,23 +6,15 @@ import createNetwork from "@/hooks/createNetwork";
 import Loading from "@/app/desktop/loading";
 import { LinkType, NodeType, StreamerListType } from "@/types/NetworkType";
 import { getFilterData, getGameIdData, getSliderData } from "@/hooks/indexedDB";
-
 import SelectParameter from "@/components/network/selectParameter/SelectParameter";
-import ChatBar from "@/components/network/chatBar/ChatBar";
 import GameList from "@/components/network/gameList/GameList";
 import NodeLink from "@/components/network/NodeLink";
 import Panel from "@/components/network/Panel";
-
 import StreamedList from "@/components/network/streamedList/StreamedList";
-
 import SearchBar from "./SearchBar";
-import IconButton from "@mui/material/IconButton";
-
-import ChatIcon from "@mui/icons-material/Chat";
 import LiveTvIcon from "@mui/icons-material/LiveTv";
 import ListIcon from '@mui/icons-material/List';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import CloseIcon from '@mui/icons-material/Close';
 import { useRouter } from "next/navigation";
 
 const buttonClasses = (isActive: boolean) =>
@@ -30,85 +22,78 @@ const buttonClasses = (isActive: boolean) =>
     isActive ? "bg-gray-700" : "hover:bg-gray-700"
   } rounded transition-colors duration-200`;
 
-  const NetworkMobile = () => {
+const NetworkMobile = () => {
 
-    const router = useRouter();
+  const router = useRouter();
 
-    const [filter, setFilter] = useState<Filter>(DEFAULT_FILTER);
-    const [slider, setSlider] = useState<SliderSettings>(DEFAULT_SLIDER);
-  
-    const [nodes, setNodes] = useState<NodeType[]>([]);
-    const [links, setLinks] = useState<LinkType[]>([]);
-    const [centerX, setCenterX] = useState<number>(0);
-    const [centerY, setCenterY] = useState<number>(0);
-  
-    const [selectedIndex, setSelectedIndex] = useState(-1);
-  
-    const [isLoading, setIsLoading] = useState(true);
-    const [isNetworkLoading, setIsNetworkLoading] = useState(false);
-  
-    const [streamerIds, setStreamerIds] = useState<StreamerListType[]>([]);
-  
-    const [openPanel, setOpenPanel] = useState<string | null>(null);
-  
-    const [progress, setProgress] = useState(0);
-  
-    // Refを使用して副作用の実行を制御
-    const hasFetchedInitialData = useRef(false);
-    
-    const initialNodes = async (filter: Filter, gameIds: string[], slider: SliderSettings) => {
-      setProgress(0);
-      const result = await createNetwork(filter, gameIds, slider, setProgress);
-      const nodes = result?.nodes ?? [];
-      const links = result?.links ?? [];
-      const buffNodes = nodes.concat();
-      buffNodes.sort(
-        (node1: NodeType, node2: NodeType) =>
-          (node2.circleScale ?? 0) - (node1.circleScale ?? 0)
-      );
-      if (buffNodes.length > 0) {
-        setCenterX((buffNodes[0]?.x ?? 0) - 150);
-        setCenterY((buffNodes[0]?.y ?? 0) + 100);
-        setSelectedIndex(-1);
-      }
-      setNodes(nodes);
-      setLinks(links);
-      setProgress(100);
-      hasFetchedInitialData.current = false; 
-    };
-  
-    useEffect(() => {
-      if ((isLoading || isNetworkLoading) && !hasFetchedInitialData.current) {
-        hasFetchedInitialData.current = true; // フラグを立てる
-        (async () => {
-          const filterData = (await getFilterData()) ?? DEFAULT_FILTER;
-          const gameIds = (await getGameIdData()) ?? [];
-          const sliderData = (await getSliderData()) ?? DEFAULT_SLIDER;
-          setFilter(filterData);
-          setSlider(sliderData);
-          await initialNodes(filterData, gameIds, sliderData);
-          setIsLoading(false);
-          setIsNetworkLoading(false);
-        })();
-      }
-    }, [isLoading, isNetworkLoading]);
-  
-    // 選択されたノードが変更されたときに中心座標を更新
-    useEffect(() => {
-      if (selectedIndex !== -1 && nodes[selectedIndex]) {
-        setCenterX((nodes[selectedIndex].x ?? 0) -150);
-        setCenterY((nodes[selectedIndex].y ?? 0) +100);
-      }
-    }, [selectedIndex]);
-  
-    const togglePanel = (panelName: string) => {
-      setOpenPanel((prevPanel) => (prevPanel === panelName ? null : panelName));
-    };
-  
+  const [filter, setFilter] = useState<Filter>(DEFAULT_FILTER);
+  const [slider, setSlider] = useState<SliderSettings>(DEFAULT_SLIDER);
 
-  if (isLoading) {
-    return <Loading />;
-  }
+  const [nodes, setNodes] = useState<NodeType[]>([]);
+  const [links, setLinks] = useState<LinkType[]>([]);
+  const [centerX, setCenterX] = useState<number>(0);
+  const [centerY, setCenterY] = useState<number>(0);
+
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+
+  const [isNetworkLoading, setIsNetworkLoading] = useState(true);
+
+  const [streamerIds, setStreamerIds] = useState<StreamerListType[]>([]);
+
+  const [openPanel, setOpenPanel] = useState<string | null>(null);
+
+  const [progress, setProgress] = useState(0);
+
+  // Refを使用して副作用の実行を制御
+  const hasFetchedInitialData = useRef(false);
+  
+  const initialNodes = async (filter: Filter, gameIds: string[], slider: SliderSettings) => {
+    setProgress(0);
+    const result = await createNetwork(filter, gameIds, slider, setProgress);
+    const nodes = result?.nodes ?? [];
+    const links = result?.links ?? [];
+    const buffNodes = nodes.concat();
+    buffNodes.sort(
+      (node1: NodeType, node2: NodeType) =>
+        (node2.circleScale ?? 0) - (node1.circleScale ?? 0)
+    );
+    if (buffNodes.length > 0) {
+      setCenterX((buffNodes[0]?.x ?? 0) - 150);
+      setCenterY((buffNodes[0]?.y ?? 0) + 100);
+      setSelectedIndex(-1);
+    }
+    setNodes(nodes);
+    setLinks(links);
+    setProgress(100);
+    hasFetchedInitialData.current = false;
+  };
+
+  useEffect(() => {
+    if (isNetworkLoading && !hasFetchedInitialData.current) {
+      hasFetchedInitialData.current = true; // フラグを立てる
+      (async () => {
+        const filterData = (await getFilterData()) ?? DEFAULT_FILTER;
+        const gameIds = (await getGameIdData()) ?? [];
+        const sliderData = (await getSliderData()) ?? DEFAULT_SLIDER;
+        setFilter(filterData);
+        setSlider(sliderData);
+        await initialNodes(filterData, gameIds, sliderData);
+        setIsNetworkLoading(false);
+      })();
+    }
+  }, [isNetworkLoading]);
+
+  // 選択されたノードが変更されたときに中心座標を更新
+  useEffect(() => {
+    if (selectedIndex !== -1 && nodes[selectedIndex]) {
+      setCenterX((nodes[selectedIndex].x ?? 0) -150);
+      setCenterY((nodes[selectedIndex].y ?? 0) +100);
+    }
+  }, [selectedIndex]);
+
+  const togglePanel = (panelName: string) => {
+    setOpenPanel((prevPanel) => (prevPanel === panelName ? null : panelName));
+  };
 
   return (
     <div>
@@ -130,7 +115,7 @@ const buttonClasses = (isActive: boolean) =>
             nodes={nodes}
             selectedIndex={selectedIndex}
             setSelectedIndex={setSelectedIndex}
-            setIsLoading={setIsLoading}
+            setIsNetworkLoading={setIsNetworkLoading}
           />
         </div>
       )}
@@ -146,7 +131,7 @@ const buttonClasses = (isActive: boolean) =>
 
         {openPanel === "filter"  && (
           <div className="bg-gray-900 overflow-y-auto overflow-x-hidden z-50">
-            <SelectParameter filter={filter} setFilter={setFilter} setIsLoading={setIsLoading} />
+            <SelectParameter filter={filter} setFilter={setFilter} setIsNetworkLoading={setIsNetworkLoading} />
           </div>
         )}
 
