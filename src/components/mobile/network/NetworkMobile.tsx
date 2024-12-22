@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DEFAULT_FILTER, DEFAULT_SLIDER } from "@/constants/DEFAULT_FILTER";
 import { Filter, SliderSettings } from "@/types/api/FilterType";
 import createNetwork from "@/hooks/createNetwork";
@@ -30,113 +30,81 @@ const buttonClasses = (isActive: boolean) =>
     isActive ? "bg-gray-700" : "hover:bg-gray-700"
   } rounded transition-colors duration-200`;
 
-const NetworkMobile = () => {
-  const router = useRouter();
+  const NetworkMobile = () => {
 
-  const [filter, setFilter] = useState<Filter>(DEFAULT_FILTER);
+    const router = useRouter();
 
-  const [nodes, setNodes] = useState<NodeType[]>([]);
-  const [links, setLinks] = useState<LinkType[]>([]);
-  const [centerX, setCenterX] = useState<number>(0);
-  const [centerY, setCenterY] = useState<number>(0);
-
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [streamerIds, setStreamerIds] = useState<StreamerListType[]>([]);
-
-  // 各機能の開閉状態を管理
-  const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
-  const [isStreamerOpen, setIsStreamerOpen] = useState<boolean>(false);
-  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
-  const [isSteamListOpen, setIsSteamListOpen] = useState<boolean>(false);
-
-  const initialNodes = async (filter: Filter, gameIds: string[], slider: SliderSettings) => {
-    const result = await createNetwork(filter, gameIds, slider);
-    const nodes = result?.nodes ?? [];
-    const links = result?.links ?? [];
-    const buffNodes = nodes.concat();
-    buffNodes.sort(
-      (node1: NodeType, node2: NodeType) =>
-        (node2.circleScale ?? 0) - (node1.circleScale ?? 0)
-    );
-    if (centerX === 0 && centerY === 0 && buffNodes.length > 0) {
-      setCenterX(buffNodes[0]?.x ?? 0);
-      setCenterY(buffNodes[0]?.y ?? 0);
-    }
-    setNodes(nodes);
-    setLinks(links);
-  };
-
-  useEffect(() => {
-    if (isLoading) {
-      (async () => {
-        const filter = (await getFilterData()) ?? DEFAULT_FILTER;
-        const slider = (await getSliderData()) ?? DEFAULT_SLIDER;
-        const gameIds = (await getGameIdData()) ?? [];
-        setFilter(filter);
-        await initialNodes(filter, gameIds, slider);
-        setIsLoading(false);
-      })();
-    }
-  }, [isLoading]);
-
-  useEffect(() => {
-    if (!isLoading) {
-      (async () => {
-        const gameIds = (await getGameIdData()) ?? [];
-        const slider = (await getSliderData()) ?? DEFAULT_SLIDER;
-        initialNodes(filter, gameIds, slider);
-      })();
-    }
-  }, [filter]);
-
-  useEffect(() => {
-    if (selectedIndex !== -1) {
-      setIsStreamerOpen(false);
-      setIsChatOpen(false);
-      setIsSteamListOpen(false);
-      if (nodes[selectedIndex]) {
-        setCenterX((nodes[selectedIndex].x ?? 0) - 70);
-        setCenterY((nodes[selectedIndex].y ?? 0) + 150);
+    const [filter, setFilter] = useState<Filter>(DEFAULT_FILTER);
+    const [slider, setSlider] = useState<SliderSettings>(DEFAULT_SLIDER);
+  
+    const [nodes, setNodes] = useState<NodeType[]>([]);
+    const [links, setLinks] = useState<LinkType[]>([]);
+    const [centerX, setCenterX] = useState<number>(0);
+    const [centerY, setCenterY] = useState<number>(0);
+  
+    const [selectedIndex, setSelectedIndex] = useState(-1);
+  
+    const [isLoading, setIsLoading] = useState(true);
+    const [isNetworkLoading, setIsNetworkLoading] = useState(false);
+  
+    const [streamerIds, setStreamerIds] = useState<StreamerListType[]>([]);
+  
+    const [openPanel, setOpenPanel] = useState<string | null>(null);
+  
+    const [progress, setProgress] = useState(0);
+  
+    // Refを使用して副作用の実行を制御
+    const hasFetchedInitialData = useRef(false);
+    
+    const initialNodes = async (filter: Filter, gameIds: string[], slider: SliderSettings) => {
+      setProgress(0);
+      const result = await createNetwork(filter, gameIds, slider, setProgress);
+      const nodes = result?.nodes ?? [];
+      const links = result?.links ?? [];
+      const buffNodes = nodes.concat();
+      buffNodes.sort(
+        (node1: NodeType, node2: NodeType) =>
+          (node2.circleScale ?? 0) - (node1.circleScale ?? 0)
+      );
+      if (buffNodes.length > 0) {
+        setCenterX((buffNodes[0]?.x ?? 0) - 150);
+        setCenterY((buffNodes[0]?.y ?? 0) + 100);
+        setSelectedIndex(-1);
       }
-    }
-  }, [selectedIndex]);
-
-  // Sidebar のトグル関数
-  const toggleStreamer = () => {
-    setIsStreamerOpen((prev) => {
-      const newState = !prev;
-      if (newState) {
-        setIsChatOpen(false);
-        setIsSteamListOpen(false);
+      setNodes(nodes);
+      setLinks(links);
+      setProgress(100);
+      hasFetchedInitialData.current = false; 
+    };
+  
+    useEffect(() => {
+      if ((isLoading || isNetworkLoading) && !hasFetchedInitialData.current) {
+        hasFetchedInitialData.current = true; // フラグを立てる
+        (async () => {
+          const filterData = (await getFilterData()) ?? DEFAULT_FILTER;
+          const gameIds = (await getGameIdData()) ?? [];
+          const sliderData = (await getSliderData()) ?? DEFAULT_SLIDER;
+          setFilter(filterData);
+          setSlider(sliderData);
+          await initialNodes(filterData, gameIds, sliderData);
+          setIsLoading(false);
+          setIsNetworkLoading(false);
+        })();
       }
-      return newState;
-    });
-  };
-
-  const toggleChat = () => {
-    setIsChatOpen((prev) => {
-      const newState = !prev;
-      if (newState) {
-        setIsStreamerOpen(false);
-        setIsSteamListOpen(false);
+    }, [isLoading, isNetworkLoading]);
+  
+    // 選択されたノードが変更されたときに中心座標を更新
+    useEffect(() => {
+      if (selectedIndex !== -1 && nodes[selectedIndex]) {
+        setCenterX((nodes[selectedIndex].x ?? 0) -150);
+        setCenterY((nodes[selectedIndex].y ?? 0) +100);
       }
-      return newState;
-    });
-  };
-
-  const toggleSteamList = () => {
-    setIsSteamListOpen((prev) => {
-      const newState = !prev;
-      if (newState) {
-        setIsStreamerOpen(false);
-        setIsChatOpen(false);
-      }
-      return newState;
-    });
-  };
+    }, [selectedIndex]);
+  
+    const togglePanel = (panelName: string) => {
+      setOpenPanel((prevPanel) => (prevPanel === panelName ? null : panelName));
+    };
+  
 
   if (isLoading) {
     return <Loading />;
@@ -144,7 +112,7 @@ const NetworkMobile = () => {
 
   return (
     <div>
-      {isStreamerOpen && (
+      {openPanel === "streamer"  && (
         <div className="w-2/3 bg-transparent overflow-y-auto overflow-x-hidden fixed">
           <Panel title="配信者" icon={<LiveTvIcon className="mr-2 text-white" />}>
             <StreamedList
@@ -156,14 +124,12 @@ const NetworkMobile = () => {
         </div>
       )}
 
-      {isSteamListOpen && (
+      {openPanel === "steamList" && (
         <div className="w-2/3 bg-transparent overflow-y-auto overflow-x-hidden fixed max-h-[93vh]">
           <GameList
             nodes={nodes}
             selectedIndex={selectedIndex}
             setSelectedIndex={setSelectedIndex}
-            setCenterX={setCenterX}
-            setCenterY={setCenterY}
             setIsLoading={setIsLoading}
           />
         </div>
@@ -171,39 +137,19 @@ const NetworkMobile = () => {
 
       <SearchBar
         nodes={nodes}
-        isFilterOpen={isFilterOpen}
-        setIsFilterOpen={setIsFilterOpen}
-        setCenterX={setCenterX}
-        setCenterY={setCenterY}
+        isFilterOpen={openPanel === "filter"}
+        setOpenPanel={setOpenPanel}
         setSelectedIndex={setSelectedIndex}
       />
 
       <div className="flex h-[88vh] overflow-hidden">
 
-        {isFilterOpen && (
+        {openPanel === "filter"  && (
           <div className="bg-gray-900 overflow-y-auto overflow-x-hidden z-50">
             <SelectParameter filter={filter} setFilter={setFilter} setIsLoading={setIsLoading} />
           </div>
         )}
 
-
-        
-        {isChatOpen && (
-          <div className="w-2/3 h-1/3 fixed bottom-0 right-0 bg-transparent overflow-hidden z-50">
-            <div className="bg-gray-800 rounded-r-lg p-4 shadow-md flex flex-col space-y-2 h-[93vh]">
-              <div className="flex items-center space-x-2">
-                <ChatIcon className="mr-2 text-white" />
-                <h2 className="text-white text-lg font-semibold">チャット</h2>
-              </div>
-              <div className="border-t border-gray-700 pt-2">
-                <ChatBar nodes={nodes} setNodes={setNodes} />
-              </div>
-              <IconButton onClick={toggleChat} sx={{ color: "white" }}>
-                <CloseIcon />
-              </IconButton>
-            </div>
-          </div>
-        )}
 
         {selectedIndex !== -1 && (
           <div className="w-full h-2/6 fixed bottom-0 right-0 bg-transparent overflow-y-auto z-30">
@@ -245,34 +191,23 @@ const NetworkMobile = () => {
             setSelectedIndex={setSelectedIndex}
             streamerIds={streamerIds}
             selectedIndex={selectedIndex}
-            isStreamerOpen={isStreamerOpen}
+            openPanel={openPanel}
           />
         </div>
 
         <div className="fixed top-40 right-2 z-10 bg-transparent text-white">
           <button
-            onClick={toggleStreamer}
-            className={buttonClasses(isStreamerOpen)}
+            onClick={() => togglePanel("streamer") }
+            className={buttonClasses(openPanel === "streamer")}
           >
             <LiveTvIcon fontSize="large"/>
           </button>
           <button
-            onClick={toggleSteamList}
-            className={buttonClasses(isSteamListOpen)}
+            onClick={() => togglePanel("steamList")}
+            className={buttonClasses(openPanel === "steamList")}
           >
             <ListIcon fontSize="large"/>
           </button>
-        </div>
-
-
-        <div className="fixed bottom-2 right-2 z-10 bg-transparent">
-          <IconButton
-            onClick={toggleChat}
-            sx={{ color: "white", borderWidth: 2, borderColor: "white", borderStyle: "solid", borderRadius: 9999, flexDirection: "column", bgcolor:"#08082e" }}
-          >
-            <ChatIcon />
-            <div className="text-sm">AIChat</div>
-          </IconButton>
         </div>
 
       </div>
